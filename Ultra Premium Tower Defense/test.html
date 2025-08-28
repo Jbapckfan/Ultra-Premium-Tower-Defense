@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+    <style>
+        body {
+            background: yellow;
+            margin: 0;
+            padding: 20px;
+        }
+        canvas {
+            border: 2px solid red;
+            display: block;
+            background: blue;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Page</h1>
+    <canvas id="testCanvas" width="400" height="300"></canvas>
+    <script>
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(50, 50, 100, 100);
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.fillText('Canvas Works!', 60, 100);
+    </script>
+</body>
+</html>

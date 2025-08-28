@@ -29,9 +29,33 @@
 		D025451B2E401CF700A0C1B0 /* Ultra Premium Tower DefenseUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ultra Premium Tower DefenseUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D02545312E401D3100A0C1B0 /* Exceptions for "Ultra Premium Tower Defense" folder in "Ultra Premium Tower Defense" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				game.html,
+			);
+			target = D02544FD2E401CF600A0C1B0 /* Ultra Premium Tower Defense */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		D02545322E401D3100A0C1B0 /* Exceptions for "Ultra Premium Tower Defense" folder in "Compile Sources" phase from "Ultra Premium Tower Defense" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = D02544FA2E401CF600A0C1B0 /* Sources */;
+			membershipExceptions = (
+				game.html,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D02545002E401CF600A0C1B0 /* Ultra Premium Tower Defense */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D02545312E401D3100A0C1B0 /* Exceptions for "Ultra Premium Tower Defense" folder in "Ultra Premium Tower Defense" target */,
+				D02545322E401D3100A0C1B0 /* Exceptions for "Ultra Premium Tower Defense" folder in "Compile Sources" phase from "Ultra Premium Tower Defense" target */,
+			);
 			path = "Ultra Premium Tower Defense";
 			sourceTree = "<group>";
 		};
