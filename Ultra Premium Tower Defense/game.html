@@ -294,7 +294,7 @@
             opacity: 0.5;
             z-index: -1;
             filter: blur(10px);
-            animation: borderRotate 4s linear infinite;
+            /* Removed spinning animation */
         }
         
         @keyframes slideIn {
@@ -332,12 +332,7 @@
         
         .towerOption:hover::before {
             opacity: 1;
-            animation: borderRotate 3s linear infinite;
-        }
-        
-        @keyframes borderRotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            /* Removed spinning animation */
         }
         
         .towerOption:hover {
@@ -585,22 +580,29 @@
         }
         
         .closeBtn {
-            background: transparent !important;
-            border: none !important;
-            color: #888 !important;
-            font-size: 20px !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 16px !important;
             cursor: pointer !important;
             padding: 0 !important;
-            width: 30px !important;
-            height: 30px !important;
+            width: 28px !important;
+            height: 28px !important;
+            border-radius: 14px !important;
             box-shadow: none !important;
-            transition: color 0.3s !important;
+            transition: all 0.3s !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
         }
         
         .closeBtn:hover {
+            background: rgba(255, 100, 100, 0.3) !important;
+            border-color: rgba(255, 100, 100, 0.5) !important;
             color: #fff !important;
-            transform: none !important;
-            box-shadow: none !important;
+            transform: scale(1.1) !important;
+            box-shadow: 0 0 10px rgba(255, 100, 100, 0.5) !important;
         }
         
         /* Scrollbar styling */
@@ -902,6 +904,9 @@
             <div style="display: flex; gap: 15px; align-items: center;">
                 <button id="addTowerBtn">🏗️ Add Tower</button>
                 <button id="startLevel">▶️ Start Level 1</button>
+                <select id="levelSelect" onchange="selectLevel(this.value)" style="background: linear-gradient(135deg, #8a2be2 0%, #ff1493 100%); color: white; border: 2px solid #ff1493; padding: 8px; border-radius: 20px; font-weight: bold; margin-left: 10px;">
+                    <option value="">Jump to Level...</option>
+                </select>
                 <button id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
                 <button id="speedBtn" onclick="cycleGameSpeed()">⚡ 1x Speed</button>
                 <button id="perfBtn" onclick="togglePerformanceMode()" title="Toggle Performance Mode">🚀 Perf</button>
@@ -1126,14 +1131,15 @@
     </div>
 
     <!-- Leaderboard Modal -->
-    <div id="leaderboardModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; justify-content: center; align-items: center;">
-        <div style="background: linear-gradient(135deg, rgba(20,20,60,0.98) 0%, rgba(40,20,80,0.98) 100%); padding: 40px; border-radius: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(138, 43, 226, 1); border: 3px solid; border-image: linear-gradient(135deg, #8a2be2, #ff1493) 1;">
+    <div id="leaderboardModal" onclick="if(event.target === this) closeLeaderboard()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(135deg, rgba(20,20,60,0.98) 0%, rgba(40,20,80,0.98) 100%); padding: 40px; border-radius: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(138, 43, 226, 1); border: 3px solid; border-image: linear-gradient(135deg, #8a2be2, #ff1493) 1; position: relative;">
+            <button class="closeBtn" onclick="closeLeaderboard()" style="position: absolute; top: 15px; right: 15px;">✕</button>
             <h2 style="color: #fff; text-align: center; margin-bottom: 30px; font-size: 36px;">🏆 Leaderboard</h2>
             <div id="leaderboardContent">
                 <!-- Leaderboard entries will be added here -->
             </div>
             <div style="text-align: center; margin-top: 30px;">
-                <button onclick="closeLeaderboard()" style="min-width: 150px;">Close</button>
+                <button onclick="closeLeaderboard()" style="min-width: 150px; background: linear-gradient(135deg, #8a2be2 0%, #ff1493 100%);">Close</button>
             </div>
         </div>
     </div>
@@ -1234,7 +1240,7 @@ const levelData = [
     { level: 2, theme: 'Grassland', enemies: [{ type: 'slime', count: 25 }], waves: 2, hpRange: [100, 120], features: 'Multiple waves' },
     { level: 3, theme: 'Grassland', enemies: [{ type: 'slime', count: 35 }, { type: 'golem', count: 3 }], waves: 2, hpRange: [120, 150], features: 'Tougher enemies appear' },
     { level: 4, theme: 'Grassland', enemies: [{ type: 'slime', count: 45 }, { type: 'golem', count: 5 }], waves: 3, hpRange: [150, 200], features: 'Increased enemy variety' },
-    { level: 5, theme: 'Grassland', enemies: [{ type: 'slime', count: 60 }, { type: 'golem', count: 8 }, { type: 'brute', count: 2 }], waves: 3, hpRange: [200, 300], features: 'Boss enemies emerge' },
+    { level: 5, theme: 'Grassland', enemies: [{ type: 'slime', count: 60 }, { type: 'golem', count: 8 }, { type: 'brute', count: 2 }, { type: 'boss', count: 1 }], waves: 3, hpRange: [200, 300], features: 'First boss battle!' },
     { level: 6, theme: 'Desert', enemies: [{ type: 'speeder', count: 20 }, { type: 'slime', count: 40 }, { type: 'golem', count: 10 }], waves: 3, hpRange: [250, 350], features: 'Speeders rush your defenses' },
     { level: 7, theme: 'Desert', enemies: [{ type: 'tank', count: 3 }, { type: 'speeder', count: 25 }, { type: 'golem', count: 15 }], waves: 4, hpRange: [300, 400], features: 'Heavily armored tanks appear' },
     { level: 8, theme: 'Haunted', enemies: [{ type: 'ghost', count: 15 }, { type: 'slime', count: 50 }, { type: 'speeder', count: 20 }], waves: 4, hpRange: [350, 450], features: 'Ghosts phase through attacks' },
@@ -1265,7 +1271,7 @@ const levelData = [
     { level: 32, theme: 'Shadow Realm', enemies: [{ type: 'shadowAssassin', count: 50 }, { type: 'voidwalker', count: 30 }, { type: 'necromancer', count: 10 }], waves: 12, hpRange: [4200, 6500], features: 'Darkness consumes' },
     { level: 33, theme: 'Quantum Flux', enemies: [{ type: 'quantumEntity', count: 30 }, { type: 'timeBender', count: 25 }, { type: 'teleporter', count: 40 }], waves: 12, hpRange: [4500, 7000], features: 'Space-time anomalies' },
     { level: 34, theme: 'Plasma Storm', enemies: [{ type: 'plasmaBeast', count: 15 }, { type: 'fireElemental', count: 40 }, { type: 'lightningElemental', count: 35 }], waves: 13, hpRange: [4800, 7500], features: 'Energy overload' },
-    { level: 35, theme: 'Ultimate Swarm', enemies: [{ type: 'hyperSwarm', count: 500 }, { type: 'corruptor', count: 15 }, { type: 'necromancer', count: 8 }], waves: 14, hpRange: [200, 500], features: 'Endless waves' },
+    { level: 35, theme: 'Ultimate Swarm', enemies: [{ type: 'hyperSwarm', count: 500 }, { type: 'corruptor', count: 15 }, { type: 'necromancer', count: 8 }, { type: 'megaBoss', count: 1 }], waves: 14, hpRange: [200, 500], features: 'Mega boss with endless swarm!' },
     { level: 36, theme: 'Elite Command', enemies: [{ type: 'eliteTank', count: 12 }, { type: 'crystalGuard', count: 25 }, { type: 'megaBoss', count: 3 }], waves: 13, hpRange: [5000, 8000], features: 'Elite forces mobilize' },
     { level: 37, theme: 'Void Convergence', enemies: [{ type: 'voidwalker', count: 40 }, { type: 'shadowAssassin', count: 60 }, { type: 'quantumEntity', count: 35 }], waves: 14, hpRange: [5200, 8500], features: 'Void consumes all' },
     { level: 38, theme: 'Elemental Apex', enemies: [{ type: 'fireElemental', count: 50 }, { type: 'iceElemental', count: 50 }, { type: 'lightningElemental', count: 50 }], waves: 15, hpRange: [5500, 9000], features: 'Peak elemental power' },
@@ -1275,7 +1281,7 @@ const levelData = [
     { level: 42, theme: 'Quantum Void', enemies: [{ type: 'quantumEntity', count: 50 }, { type: 'voidwalker', count: 50 }, { type: 'timeBender', count: 50 }], waves: 17, hpRange: [6500, 11000], features: 'Reality collapses' },
     { level: 43, theme: 'Crystal Apocalypse', enemies: [{ type: 'crystalGuard', count: 40 }, { type: 'eliteTank', count: 25 }, { type: 'corruptor', count: 30 }], waves: 17, hpRange: [7000, 12000], features: 'Crystal dominion' },
     { level: 44, theme: 'Shadow Eclipse', enemies: [{ type: 'shadowAssassin', count: 100 }, { type: 'voidwalker', count: 60 }, { type: 'necromancer', count: 20 }], waves: 18, hpRange: [7500, 13000], features: 'Total darkness' },
-    { level: 45, theme: 'Elemental Ragnarok', enemies: [{ type: 'fireElemental', count: 80 }, { type: 'iceElemental', count: 80 }, { type: 'lightningElemental', count: 80 }], waves: 19, hpRange: [8000, 14000], features: 'Elements unleashed' },
+    { level: 45, theme: 'Elemental Ragnarok', enemies: [{ type: 'fireElemental', count: 80 }, { type: 'iceElemental', count: 80 }, { type: 'lightningElemental', count: 80 }, { type: 'megaBoss', count: 2 }], waves: 19, hpRange: [8000, 14000], features: 'Twin mega bosses with elemental chaos!' },
     { level: 46, theme: 'Mega Swarm', enemies: [{ type: 'hyperSwarm', count: 1000 }, { type: 'swarm', count: 500 }, { type: 'megaBoss', count: 5 }], waves: 20, hpRange: [500, 1000], features: 'Infinite army' },
     { level: 47, theme: 'Chaos Incarnate', enemies: [{ type: 'corruptor', count: 40 }, { type: 'plasmaBeast', count: 35 }, { type: 'quantumEntity', count: 60 }], waves: 20, hpRange: [8500, 15000], features: 'Pure chaos' },
     { level: 48, theme: 'Elite Finale', enemies: [{ type: 'eliteTank', count: 40 }, { type: 'crystalGuard', count: 50 }, { type: 'megaBoss', count: 8 }], waves: 21, hpRange: [9000, 16000], features: 'Elite last stand' },
@@ -1317,8 +1323,122 @@ for (let i = 0; i < 3; i++) {
 
 // Multiple path layouts for variety every 5 levels
 const pathLayouts = {
+    // Path 1: Serpentine (Levels 1-5) - Uses full vertical space
+    serpentine: [
+        { x: 50, y: 50, tunnel: false },
+        { x: 150, y: 50, tunnel: false },
+        { x: 250, y: 50, tunnel: false },
+        { x: 350, y: 50, tunnel: false },
+        { x: 450, y: 50, tunnel: false },
+        { x: 550, y: 50, tunnel: false },
+        { x: 650, y: 50, tunnel: false },
+        { x: 750, y: 50, tunnel: false },
+        { x: 750, y: 150, tunnel: false },
+        { x: 750, y: 250, tunnel: false },
+        { x: 650, y: 250, tunnel: false },
+        { x: 550, y: 250, tunnel: false },
+        { x: 450, y: 250, tunnel: false },
+        { x: 350, y: 250, tunnel: false },
+        { x: 250, y: 250, tunnel: false },
+        { x: 150, y: 250, tunnel: false },
+        { x: 50, y: 250, tunnel: false },
+        { x: 50, y: 350, tunnel: false },
+        { x: 50, y: 450, tunnel: false },
+        { x: 150, y: 450, tunnel: false },
+        { x: 250, y: 450, tunnel: false },
+        { x: 350, y: 450, tunnel: false },
+        { x: 450, y: 450, tunnel: false },
+        { x: 550, y: 450, tunnel: false },
+        { x: 650, y: 450, tunnel: false },
+        { x: 750, y: 450, tunnel: false },
+        { x: 750, y: 550, tunnel: false },
+        { x: 650, y: 550, tunnel: false },
+        { x: 550, y: 550, tunnel: false },
+        { x: 450, y: 550, tunnel: false },
+        { x: 350, y: 550, tunnel: false },
+        { x: 250, y: 550, tunnel: false },
+        { x: 150, y: 550, tunnel: false },
+        { x: 50, y: 550, tunnel: false }
+    ],
+    
+    // Path 2: Figure-8 (Levels 6-10) - Uses full canvas
+    figure8: [
+        { x: 400, y: 50, tunnel: false },
+        { x: 500, y: 75, tunnel: false },
+        { x: 600, y: 125, tunnel: false },
+        { x: 700, y: 200, tunnel: false },
+        { x: 750, y: 300, tunnel: false },
+        { x: 700, y: 400, tunnel: false },
+        { x: 600, y: 475, tunnel: false },
+        { x: 500, y: 525, tunnel: false },
+        { x: 400, y: 550, tunnel: false },
+        { x: 300, y: 525, tunnel: false },
+        { x: 200, y: 475, tunnel: false },
+        { x: 100, y: 400, tunnel: false },
+        { x: 50, y: 300, tunnel: false },
+        { x: 100, y: 200, tunnel: false },
+        { x: 200, y: 125, tunnel: false },
+        { x: 300, y: 75, tunnel: false },
+        { x: 400, y: 50, tunnel: true }, // Tunnel crossing
+        { x: 400, y: 150, tunnel: false },
+        { x: 400, y: 250, tunnel: false },
+        { x: 400, y: 350, tunnel: false },
+        { x: 400, y: 450, tunnel: false },
+        { x: 400, y: 550, tunnel: false }
+    ],
+    
+    // Path 3: Zigzag (Levels 11-15) - Diagonal paths using full space
+    zigzag: [
+        { x: 50, y: 50, tunnel: false },
+        { x: 150, y: 150, tunnel: false },
+        { x: 250, y: 50, tunnel: false },
+        { x: 350, y: 150, tunnel: false },
+        { x: 450, y: 50, tunnel: false },
+        { x: 550, y: 150, tunnel: false },
+        { x: 650, y: 50, tunnel: false },
+        { x: 750, y: 150, tunnel: false },
+        { x: 750, y: 250, tunnel: false },
+        { x: 650, y: 350, tunnel: false },
+        { x: 550, y: 250, tunnel: false },
+        { x: 450, y: 350, tunnel: false },
+        { x: 350, y: 250, tunnel: false },
+        { x: 250, y: 350, tunnel: false },
+        { x: 150, y: 250, tunnel: false },
+        { x: 50, y: 350, tunnel: false },
+        { x: 50, y: 450, tunnel: false },
+        { x: 150, y: 550, tunnel: false },
+        { x: 250, y: 450, tunnel: false },
+        { x: 350, y: 550, tunnel: false },
+        { x: 450, y: 450, tunnel: false },
+        { x: 550, y: 550, tunnel: false },
+        { x: 650, y: 450, tunnel: false },
+        { x: 750, y: 550, tunnel: false }
+    ],
+    
+    // Path 4: Diamond (Levels 16-20) - Uses corners and center
+    diamond: [
+        { x: 400, y: 50, tunnel: false },
+        { x: 500, y: 100, tunnel: false },
+        { x: 600, y: 150, tunnel: false },
+        { x: 700, y: 200, tunnel: false },
+        { x: 750, y: 300, tunnel: false },
+        { x: 700, y: 400, tunnel: false },
+        { x: 600, y: 450, tunnel: false },
+        { x: 500, y: 500, tunnel: false },
+        { x: 400, y: 550, tunnel: false },
+        { x: 300, y: 500, tunnel: false },
+        { x: 200, y: 450, tunnel: false },
+        { x: 100, y: 400, tunnel: false },
+        { x: 50, y: 300, tunnel: false },
+        { x: 100, y: 200, tunnel: false },
+        { x: 200, y: 150, tunnel: false },
+        { x: 300, y: 100, tunnel: false },
+        { x: 400, y: 50, tunnel: true }, // Back to start with tunnel
+        { x: 400, y: 300, tunnel: false } // To center base
+    ],
+    
+    // Keep original spiral as path 5 (Levels 21-25)
     spiral: [
-        // Original spiral path - Levels 1-5
         { x: 750, y: 150, tunnel: false },
         { x: 700, y: 160, tunnel: false },
         { x: 650, y: 180, tunnel: false },
@@ -1553,8 +1673,8 @@ const pathLayouts = {
     ]
 };
 
-// Current path layout
-let currentPathLayout = 'spiral';
+// Current path layout - Start with serpentine
+let currentPathLayout = 'serpentine';
 let originalPath = pathLayouts[currentPathLayout];
 
 // Function to scale path based on canvas size
@@ -5029,6 +5149,83 @@ function drawBeams() {
     });
 }
 
+// Draw boss health bars at top of screen
+function drawBossHealthBars() {
+    // Find all boss enemies
+    const bosses = enemies.filter(enemy => 
+        enemy.type === 'boss' || 
+        enemy.type === 'megaBoss' || 
+        enemy.type === 'finalBoss'
+    );
+    
+    if (bosses.length === 0) return;
+    
+    // Draw each boss health bar
+    bosses.forEach((boss, index) => {
+        const barWidth = canvas.width * 0.6;
+        const barHeight = 30;
+        const barX = (canvas.width - barWidth) / 2;
+        const barY = 10 + (index * 40); // Stack multiple boss bars
+        
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+        
+        // Health bar background
+        ctx.fillStyle = '#333';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        // Health bar
+        const healthPercent = boss.health / boss.maxHealth;
+        const gradient = ctx.createLinearGradient(barX, barY, barX + barWidth * healthPercent, barY);
+        
+        if (boss.type === 'finalBoss') {
+            gradient.addColorStop(0, '#ff0000');
+            gradient.addColorStop(0.5, '#ff00ff');
+            gradient.addColorStop(1, '#ffaa00');
+        } else if (boss.type === 'megaBoss') {
+            gradient.addColorStop(0, '#ff0066');
+            gradient.addColorStop(1, '#ff3399');
+        } else {
+            gradient.addColorStop(0, '#cc0000');
+            gradient.addColorStop(1, '#ff0000');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+        
+        // Animated shine effect
+        const shineX = barX + (Date.now() % 2000) / 2000 * barWidth;
+        const shineGrad = ctx.createLinearGradient(shineX - 20, barY, shineX + 20, barY);
+        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        shineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.3)');
+        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = shineGrad;
+        ctx.fillRect(shineX - 20, barY, 40, barHeight);
+        
+        // Border
+        ctx.strokeStyle = boss.type === 'finalBoss' ? '#ff00ff' : '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+        
+        // Boss name and health text
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 16px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        let bossName = 'BOSS';
+        if (boss.type === 'finalBoss') bossName = '☠️ FINAL BOSS ☠️';
+        else if (boss.type === 'megaBoss') bossName = '💀 MEGA BOSS 💀';
+        
+        ctx.fillText(bossName, canvas.width / 2, barY + barHeight / 2);
+        
+        // Health numbers
+        ctx.font = '12px Orbitron';
+        ctx.fillText(`${Math.floor(boss.health)} / ${boss.maxHealth}`, canvas.width / 2, barY + barHeight + 12);
+    });
+}
+
 // Draw power-ups
 function drawPowerups() {
     powerups.forEach(powerup => {
@@ -5306,10 +5503,53 @@ function cycleGameSpeed() {
         gameSpeed = 2;
     } else if (gameSpeed === 2) {
         gameSpeed = 3;
+    } else if (gameSpeed === 3) {
+        gameSpeed = 4;
+    } else if (gameSpeed === 4) {
+        gameSpeed = 5;
     } else {
         gameSpeed = 1;
     }
     document.getElementById('speedBtn').textContent = `⚡ ${gameSpeed}x Speed`;
+    
+    // Change button color based on speed
+    const btn = document.getElementById('speedBtn');
+    if (gameSpeed === 1) {
+        btn.style.background = 'linear-gradient(135deg, #8a2be2 0%, #ff1493 100%)';
+    } else if (gameSpeed === 2) {
+        btn.style.background = 'linear-gradient(135deg, #00ff00 0%, #00aa00 100%)';
+    } else if (gameSpeed === 3) {
+        btn.style.background = 'linear-gradient(135deg, #ffaa00 0%, #ff6600 100%)';
+    } else if (gameSpeed === 4) {
+        btn.style.background = 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)';
+    } else {
+        btn.style.background = 'linear-gradient(135deg, #ff00ff 0%, #ff0066 100%)';
+    }
+}
+
+// Level selection for testing
+function selectLevel(selectedLevel) {
+    if (!selectedLevel) return;
+    
+    const levelNum = parseInt(selectedLevel);
+    if (levelNum > 0 && levelNum <= levelData.length) {
+        level = levelNum;
+        money = 400 + (levelNum - 1) * 100; // Give more money for higher levels
+        score = levelNum * 1000;
+        
+        // Change path layout based on selected level
+        const newLayout = getPathLayoutForLevel(level);
+        if (newLayout !== currentPathLayout) {
+            changePathLayout(newLayout);
+        }
+        
+        document.getElementById('startLevel').textContent = `▶️ Start Level ${level}`;
+        updateUI();
+        showNotification(`📍 Jumped to Level ${level}`);
+    }
+    
+    // Reset dropdown
+    document.getElementById('levelSelect').value = '';
 }
 
 // Game mode selection functions
@@ -5423,7 +5663,7 @@ function startChallengeWave() {
             clearInterval(spawnInterval);
             enemiesSpawning = false;
         }
-    }, 800 - Math.min(challengeWave * 10, 500)); // Faster spawning as waves progress
+    }, Math.max(1200 - Math.min(challengeWave * 20, 800), 400)); // Increased spacing, minimum 400ms between enemies
 }
 
 function viewLeaderboard() {
@@ -5638,16 +5878,17 @@ function startNextLevel() {
 
 // Determine which path layout to use based on level
 function getPathLayoutForLevel(level) {
-    if (level <= 5) return 'spiral';
-    else if (level <= 10) return 'zigzag';
-    else if (level <= 15) return 'cross';
-    else if (level <= 20) return 'maze';
-    else if (level <= 25) return 'highway';
-    else if (level <= 30) return 'spiral';  // Loop back
-    else if (level <= 35) return 'zigzag';
-    else if (level <= 40) return 'cross';
-    else if (level <= 45) return 'maze';
-    else return 'highway';
+    if (level <= 5) return 'serpentine';
+    else if (level <= 10) return 'figure8';
+    else if (level <= 15) return 'zigzag';
+    else if (level <= 20) return 'diamond';
+    else if (level <= 25) return 'spiral';
+    // Loop back through paths for higher levels
+    else {
+        const pathCycle = ['serpentine', 'figure8', 'zigzag', 'diamond', 'spiral'];
+        const index = Math.floor((level - 1) / 5) % pathCycle.length;
+        return pathCycle[index];
+    }
 }
 
 // Change path layout while preserving towers
@@ -6180,6 +6421,9 @@ function gameLoop(currentTime) {
         drawBeams();
         updatePowerups();
         drawPowerups();
+        
+        // Draw boss health bars
+        drawBossHealthBars();
         
         // Update player 2 cursor in co-op mode
         updatePlayer2Cursor();
@@ -6737,6 +6981,9 @@ function initGame() {
     window.cycleGameSpeed = cycleGameSpeed;
     window.toggleAutoStart = toggleAutoStart;
     window.restartGame = restartGame;
+    window.closeLeaderboard = closeLeaderboard;
+    window.showInGameLeaderboard = showInGameLeaderboard;
+    window.selectLevel = selectLevel;
     
     // Also make canvas and ctx globally accessible
     window.canvas = canvas;
@@ -6744,6 +6991,24 @@ function initGame() {
 
     // Initialize UI
     updateUI();
+    
+    // Populate level selector for testing
+    const levelSelect = document.getElementById('levelSelect');
+    if (levelSelect && levelSelect.options.length <= 1) {
+        // Add boss levels with special markers
+        const bossLevels = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+        for (let i = 1; i <= 50; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            if (bossLevels.includes(i)) {
+                option.textContent = `Level ${i} ⚔️ BOSS`;
+                option.style.color = '#ff0000';
+            } else {
+                option.textContent = `Level ${i}`;
+            }
+            levelSelect.appendChild(option);
+        }
+    }
     
     // Start game loop
     console.log('Starting game loop...');
