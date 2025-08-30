@@ -910,6 +910,9 @@
                 <button id="pauseBtn" onclick="togglePause()">⏸️ Pause</button>
                 <button id="speedBtn" onclick="cycleGameSpeed()">⚡ 1x Speed</button>
                 <button id="perfBtn" onclick="togglePerformanceMode()" title="Toggle Performance Mode">🚀 Perf</button>
+                <button id="bombBtn" onclick="useSpecialAbility('bomb')" title="Bomb (B) - Unlocks at level 10" style="background: linear-gradient(135deg, #ff6600 0%, #ff3300 100%); position: relative; display: none;">💣 <span id="bombCooldown" style="position: absolute; top: -5px; right: -5px; font-size: 10px; background: black; padding: 2px; border-radius: 10px;"></span></button>
+                <button id="freezeBtn" onclick="useSpecialAbility('freeze')" title="Freeze (F) - Unlocks at level 15" style="background: linear-gradient(135deg, #00ccff 0%, #0088ff 100%); position: relative; display: none;">❄️ <span id="freezeCooldown" style="position: absolute; top: -5px; right: -5px; font-size: 10px; background: black; padding: 2px; border-radius: 10px;"></span></button>
+                <button id="doubleBtn" onclick="useSpecialAbility('double')" title="Double Damage (D) - Unlocks at level 20" style="background: linear-gradient(135deg, #ffcc00 0%, #ff8800 100%); position: relative; display: none;">⚔️ <span id="doubleCooldown" style="position: absolute; top: -5px; right: -5px; font-size: 10px; background: black; padding: 2px; border-radius: 10px;"></span></button>
                 <button id="wavePreviewBtn" onclick="toggleWavePreview()">👁️ Preview</button>
                 <button id="leaderboardBtn" onclick="showInGameLeaderboard()">🏆</button>
                 <label style="margin-left: 10px; font-size: 12px;">
@@ -1188,6 +1191,13 @@ let beams = [];
 let powerups = [];
 let levelActive = false;
 let selectedTowerType = null;
+
+// Special abilities
+let specialAbilities = {
+    bomb: { cooldown: 0, maxCooldown: 1800, unlocked: false }, // 30 seconds
+    freeze: { cooldown: 0, maxCooldown: 2700, unlocked: false }, // 45 seconds  
+    double: { cooldown: 0, maxCooldown: 3600, active: 0, unlocked: false } // 60 seconds, lasts 10 seconds
+};
 let placingTower = false;
 let sellMode = false;
 let challengeMode = false;
@@ -1942,6 +1952,9 @@ class Tower {
         this.abilityDuration = 0;
         this.stunned = 0;
         this.upgradeAnimation = 0;
+        this.specializationAnimation = 0;
+        this.specialAbilityCooldown = 0;
+        this.specialAbilityActive = false;
     }
     
     checkSynergies() {
@@ -2021,23 +2034,271 @@ class Tower {
         if (this.level >= 5 && !this.specialization) {
             this.specialization = type;
             
-            switch(type) {
-                case 'power':
-                    this.stats.damage *= 1.4;
-                    this.stats.fireRate *= 1.15;
-                    break;
-                case 'speed':
-                    this.stats.fireRate *= 0.65;
-                    if (this.stats.projectileSpeed) {
-                        this.stats.projectileSpeed *= 1.4;
+            // Enhanced tower-specific specialization bonuses
+            const towerSpecs = {
+                pulse: {
+                    power: {
+                        damage: 2.2,
+                        fireRate: 0.8,
+                        critChance: 0.25,
+                        ability: 'rapidfire' // 3 seconds of 3x fire rate
+                    },
+                    speed: {
+                        fireRate: 0.4,
+                        projectileSpeed: 2.5,
+                        multishot: 2,
+                        ability: 'overdrive' // 5 seconds of no reload
+                    },
+                    effect: {
+                        damage: 1.5,
+                        slow: 0.4,
+                        pierce: 3,
+                        ability: 'freeze' // Freezes all enemies in range for 2 seconds
                     }
-                    break;
-                case 'effect':
-                    if (this.stats.chain) this.stats.chainCount += 1;
-                    if (this.stats.splash) this.stats.splashRadius *= 1.3;
-                    if (this.stats.beam) this.stats.range *= 1.2;
-                    break;
+                },
+                laser: {
+                    power: {
+                        damage: 2.5,
+                        beamWidth: 3,
+                        burnDps: 10,
+                        ability: 'megabeam' // 3x damage beam for 4 seconds
+                    },
+                    speed: {
+                        fireRate: 0.2,
+                        range: 1.8,
+                        chainBeams: 2,
+                        ability: 'prism' // Splits into 5 beams
+                    },
+                    effect: {
+                        penetrate: true,
+                        weaken: 0.3,
+                        chainCount: 3,
+                        ability: 'disintegrate' // Instant kill enemies below 30% health
+                    }
+                },
+                missile: {
+                    power: {
+                        damage: 3.0,
+                        splashRadius: 2.5,
+                        stunDuration: 1.0,
+                        ability: 'nuke' // Massive explosion dealing 1000 damage
+                    },
+                    speed: {
+                        fireRate: 0.3,
+                        projectileSpeed: 4.0,
+                        barrage: 3,
+                        ability: 'cluster' // Fires 10 missiles at once
+                    },
+                    effect: {
+                        splashRadius: 3.5,
+                        burnDps: 15,
+                        fragment: 8,
+                        ability: 'napalm' // Leaves burning area for 10 seconds
+                    }
+                },
+                tesla: {
+                    power: {
+                        damage: 2.0,
+                        chainCount: 4,
+                        stunChance: 0.5,
+                        ability: 'thunderstorm' // Chain lightning hits all enemies
+                    },
+                    speed: {
+                        fireRate: 0.3,
+                        chainSpeed: 3.0,
+                        instantChain: true,
+                        ability: 'surge' // Double chain count for 5 seconds
+                    },
+                    effect: {
+                        chainCount: 6,
+                        range: 1.6,
+                        emp: true,
+                        ability: 'emp' // Disables all enemy abilities for 5 seconds
+                    }
+                },
+                plasma: {
+                    power: {
+                        damage: 3.2,
+                        splashRadius: 2.0,
+                        meltArmor: true,
+                        ability: 'meltdown' // Continuous damage aura
+                    },
+                    speed: {
+                        fireRate: 0.2,
+                        projectileSpeed: 3.5,
+                        homing: 2.0,
+                        ability: 'plasma_volley' // Rapid fire plasma bursts
+                    },
+                    effect: {
+                        splashRadius: 3.0,
+                        slow: 0.7,
+                        dot: 20,
+                        ability: 'plasma_field' // Creates damaging field
+                    }
+                },
+                railgun: {
+                    power: {
+                        damage: 4.0,
+                        pierce: 999,
+                        critMultiplier: 3.0,
+                        ability: 'piercing_shot' // One shot pierces all enemies
+                    },
+                    speed: {
+                        fireRate: 0.2,
+                        range: 2.0,
+                        instantHit: true,
+                        ability: 'rapid_rail' // Machine gun mode
+                    },
+                    effect: {
+                        stunDuration: 1.5,
+                        knockback: 100,
+                        shred: 0.7,
+                        ability: 'shockwave' // Knockback wave
+                    }
+                },
+                quantum: {
+                    power: {
+                        damage: 2.8,
+                        phaseShift: true,
+                        voidDamage: 0.5,
+                        ability: 'void_rift' // Creates damaging rift
+                    },
+                    speed: {
+                        fireRate: 0.3,
+                        teleportShots: true,
+                        multiverse: 3,
+                        ability: 'time_warp' // Slows time in area
+                    },
+                    effect: {
+                        slow: 0.9,
+                        confuse: true,
+                        reality_tear: true,
+                        ability: 'singularity' // Mini black hole
+                    }
+                },
+                void: {
+                    power: {
+                        damage: 3.5,
+                        pullForce: 200,
+                        crushDamage: 50,
+                        ability: 'black_hole' // Massive gravity well
+                    },
+                    speed: {
+                        fireRate: 0.2,
+                        range: 2.0,
+                        vortexSpeed: 2.0,
+                        ability: 'gravity_pulse' // Pulls then pushes
+                    },
+                    effect: {
+                        pullForce: 300,
+                        slow: 0.98,
+                        implode: true,
+                        ability: 'void_prison' // Traps enemies
+                    }
+                },
+                prism: {
+                    power: {
+                        damage: 2.8,
+                        splitCount: 5,
+                        rainbow: true,
+                        ability: 'spectrum' // All damage types
+                    },
+                    speed: {
+                        fireRate: 0.3,
+                        beamCount: 8,
+                        instantSplit: true,
+                        ability: 'disco' // Rotating laser show
+                    },
+                    effect: {
+                        splitCount: 10,
+                        refract: true,
+                        blind: 0.5,
+                        ability: 'kaleidoscope' // Confuses and damages
+                    }
+                },
+                omega: {
+                    power: {
+                        damage: 5.0,
+                        annihilate: true,
+                        overkill: true,
+                        ability: 'doomsday' // Screen clear
+                    },
+                    speed: {
+                        fireRate: 0.1,
+                        omnishot: true,
+                        instantKill: 0.15,
+                        ability: 'time_stop' // Freezes all enemies
+                    },
+                    effect: {
+                        damage: 3.0,
+                        apocalypse: true,
+                        cascade: 15,
+                        ability: 'omega_wave' // Expanding death wave
+                    }
+                }
+            };
+            
+            const specs = towerSpecs[this.type]?.[type] || {
+                power: { damage: 1.8, fireRate: 0.85 },
+                speed: { fireRate: 0.5, projectileSpeed: 1.8 },
+                effect: { range: 1.4, special: true }
+            }[type];
+            
+            // Apply specialization bonuses
+            Object.entries(specs).forEach(([key, value]) => {
+                if (key === 'ability') {
+                    this.specialAbility = value;
+                } else if (key === 'damage' || key === 'range' || key === 'projectileSpeed') {
+                    if (this.stats[key]) this.stats[key] *= value;
+                } else if (key === 'fireRate') {
+                    this.stats.fireRate *= value;
+                } else if (key === 'splashRadius') {
+                    if (!this.stats.splashRadius) this.stats.splashRadius = 60;
+                    this.stats.splashRadius *= value;
+                } else if (key === 'chainCount') {
+                    if (!this.stats.chainCount) this.stats.chainCount = 0;
+                    this.stats.chainCount += value;
+                    this.stats.chain = true;
+                } else {
+                    this.stats[key] = value;
+                }
+            });
+            
+            // Visual effect for specialization
+            this.specializationAnimation = 120;
+            
+            // Create epic specialization particles
+            const colors = {
+                power: '#ff4444',
+                speed: '#44ff44',
+                effect: '#4444ff'
+            };
+            
+            for (let i = 0; i < 40; i++) {
+                const angle = (i / 40) * Math.PI * 2;
+                const speed = 10 + Math.random() * 15;
+                particles.push({
+                    x: this.x,
+                    y: this.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: colors[type],
+                    life: 1,
+                    size: 10,
+                    type: 'spark'
+                });
             }
+            
+            // Show notification
+            const specNames = {
+                power: '💥 Power',
+                speed: '⚡ Speed', 
+                effect: '✨ Effect'
+            };
+            showNotification(`${this.stats.name} specialized: ${specNames[type]}!`);
+            
+            // Play sound
+            playSound('achievement');
             
             if (!achievements.specialization.unlocked) {
                 unlockAchievement('specialization');
@@ -2045,8 +2306,134 @@ class Tower {
         }
     }
     
+    activateSpecialAbility() {
+        if (this.specialAbility && this.specialAbilityCooldown <= 0) {
+            this.specialAbilityActive = true;
+            this.specialAbilityCooldown = 600; // 10 second cooldown
+            
+            // Execute ability based on type
+            switch(this.specialAbility) {
+                case 'freeze':
+                    // Freeze all enemies in range
+                    enemies.forEach(enemy => {
+                        const dist = Math.sqrt(
+                            Math.pow(enemy.position.x - this.x, 2) +
+                            Math.pow(enemy.position.y - this.y, 2)
+                        );
+                        if (dist <= this.stats.range) {
+                            enemy.frozen = 120; // 2 seconds
+                        }
+                    });
+                    // Freeze effect
+                    for (let i = 0; i < 30; i++) {
+                        const angle = (i / 30) * Math.PI * 2;
+                        particles.push({
+                            x: this.x + Math.cos(angle) * this.stats.range,
+                            y: this.y + Math.sin(angle) * this.stats.range,
+                            vx: 0,
+                            vy: -2,
+                            color: '#00ffff',
+                            life: 1,
+                            size: 8,
+                            type: 'snowflake'
+                        });
+                    }
+                    playSound('freeze');
+                    break;
+                    
+                case 'nuke':
+                    // Find nearest enemy and nuke area
+                    const target = this.findTarget();
+                    if (target) {
+                        // Deal massive damage in area
+                        enemies.forEach(enemy => {
+                            const dist = Math.sqrt(
+                                Math.pow(enemy.position.x - target.position.x, 2) +
+                                Math.pow(enemy.position.y - target.position.y, 2)
+                            );
+                            if (dist <= 150) {
+                                enemy.takeDamage(1000 * (1 - dist / 150));
+                            }
+                        });
+                        // Nuke explosion effect
+                        for (let i = 0; i < 100; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = Math.random() * 30;
+                            particles.push({
+                                x: target.position.x,
+                                y: target.position.y,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                color: ['#ff0000', '#ff8800', '#ffff00'][Math.floor(Math.random() * 3)],
+                                life: 1,
+                                size: 15,
+                                type: 'explosion'
+                            });
+                        }
+                        screenShake = 30;
+                        playSound('explosion');
+                    }
+                    break;
+                    
+                case 'time_stop':
+                    // Stop all enemies for 3 seconds
+                    enemies.forEach(enemy => {
+                        enemy.timeStop = 180;
+                    });
+                    // Time stop visual
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(128, 128, 255, 0.3)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.restore();
+                    playSound('powerup');
+                    break;
+                    
+                case 'black_hole':
+                    // Create a black hole that pulls enemies
+                    this.blackHoleActive = 300; // 5 seconds
+                    this.blackHoleX = this.x;
+                    this.blackHoleY = this.y;
+                    playSound('void');
+                    break;
+                    
+                // Add more ability implementations as needed
+                default:
+                    // Generic powerful attack
+                    this.stats.damage *= 3;
+                    setTimeout(() => {
+                        this.stats.damage /= 3;
+                    }, 3000);
+                    break;
+            }
+            
+            showNotification(`🎆 ${this.stats.name} used special ability!`);
+        }
+    }
+    
     update() {
         this.idleAnimation += 0.05 * gameSpeed;
+        
+        // Update special ability cooldown
+        if (this.specialAbilityCooldown > 0) {
+            this.specialAbilityCooldown -= gameSpeed;
+        }
+        
+        // Handle black hole special ability
+        if (this.blackHoleActive > 0) {
+            this.blackHoleActive -= gameSpeed;
+            // Pull enemies toward black hole
+            enemies.forEach(enemy => {
+                const dx = this.blackHoleX - enemy.position.x;
+                const dy = this.blackHoleY - enemy.position.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 10 && dist < 300) {
+                    const pullForce = 200 / dist;
+                    enemy.position.x += (dx / dist) * pullForce * gameSpeed;
+                    enemy.position.y += (dy / dist) * pullForce * gameSpeed;
+                    enemy.takeDamage(2 * gameSpeed);
+                }
+            });
+        }
         
         // Update stun
         if (this.stunned > 0) {
