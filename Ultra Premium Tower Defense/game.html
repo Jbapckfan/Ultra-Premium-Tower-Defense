@@ -13,7 +13,10 @@
     <!-- <script src="game_assets.js"></script> -->
     <!-- <script src="enhanced_particles.js"></script> -->
     <script src="monetization_system.js"></script>
-    
+    <script src="analytics_system.js"></script>
+    <script src="tutorial_system.js"></script>
+    <script src="meta_progression.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
@@ -1186,8 +1189,17 @@ function resizeCanvas() {
 
 
 // Game state
-let money = 400; // Reduced starting money
-let health = 100;
+// Apply research bonuses if available
+let startingMoney = 400;
+let startingHealth = 100;
+if (window.metaProgression) {
+    const bonuses = window.metaProgression.applyResearchEffects();
+    startingMoney = bonuses.startingMoney || 400;
+    startingHealth = bonuses.baseHealth || 100;
+}
+
+let money = startingMoney;
+let health = startingHealth;
 let level = 1;
 // Make money global for monetization system
 window.money = money;
@@ -4828,6 +4840,22 @@ class Enemy {
             money += rewardAmount;
             window.money = money;
             score += this.reward * level;
+
+            // Track analytics
+            if (window.analytics) {
+                window.analytics.trackEnemyDeath(this.position.x, this.position.y, this.type, 'tower');
+                window.analytics.track('enemy_killed', { type: this.type, reward: rewardAmount });
+            }
+
+            // Add meta progression XP
+            if (window.metaProgression) {
+                window.metaProgression.addXP(this.boss ? 50 : 10, 'enemy_kill');
+                window.metaProgression.updateQuestProgress('kills', 1);
+                if (this.boss) {
+                    window.metaProgression.updateQuestProgress('boss', 1);
+                }
+                window.metaProgression.updateCollection('enemies', this.type, { killed: 1 });
+            }
             updateUI();
             
             // Death explosion effect
@@ -6432,7 +6460,19 @@ function placeTowerAt(x, y, towerType) {
         money -= cost;
         const newTower = new Tower(towerType, x, y);
         towers.push(newTower);
-        
+
+        // Track analytics
+        if (window.analytics) {
+            window.analytics.trackTowerPlacement(x, y, towerType);
+            window.analytics.track('tower_placed', { type: towerType, cost: cost });
+        }
+
+        // Update meta progression
+        if (window.metaProgression) {
+            window.metaProgression.updateQuestProgress('towers', 1);
+            window.metaProgression.updateCollection('towers', towerType, { uses: 1 });
+        }
+
         // Check synergies for all towers
         towers.forEach(tower => tower.checkSynergies());
         
@@ -6730,6 +6770,21 @@ function spawnWave(levelInfo) {
     currentWave++;
     window.currentWave = currentWave;
     enemiesSpawning = true;
+
+    // Track wave completion
+    if (window.analytics && currentWave > 1) {
+        window.analytics.track('wave_completed', { wave: currentWave - 1, health: health });
+    }
+
+    // Update meta progression
+    if (window.metaProgression && currentWave > 1) {
+        window.metaProgression.addXP(50 + (currentWave * 5), 'wave_complete');
+        window.metaProgression.updateQuestProgress('waves', 1);
+        window.metaProgression.stats.totalWavesCompleted++;
+        if (currentWave > window.metaProgression.stats.highestWave) {
+            window.metaProgression.stats.highestWave = currentWave;
+        }
+    }
 
     // Give gems for completing waves
     if (window.monetization && currentWave > 1) {
