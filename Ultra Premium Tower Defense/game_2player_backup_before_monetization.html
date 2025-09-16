@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>2-Player Tower Defense - Working</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            touch-action: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #gameCanvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            touch-action: none;
+        }
+        
+        .mode-selector {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 10000;
+            border: 2px solid #00ff00;
+        }
+        
+        .mode-button {
+            background: linear-gradient(135deg, #003366, #006699);
+            color: white;
+            border: 2px solid #00ffff;
+            padding: 20px 40px;
+            margin: 15px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            width: 300px;
+        }
+        
+        .ui-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            z-index: 1000;
+            border-bottom: 2px solid #333;
+        }
+        
+        .player-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .p1-stats { color: #00ff00; }
+        .p2-stats { color: #00ffff; text-align: right; }
+        
+        .tower-buttons {
+            position: fixed;
+            bottom: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .p1-towers { left: 10px; }
+        .p2-towers { right: 10px; }
+        
+        .tower-btn {
+            background: rgba(0,0,50,0.9);
+            border: 2px solid #0099ff;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .tower-btn:active {
+            background: rgba(0,0,100,0.9);
+            transform: scale(0.95);
+        }
+        
+        .freeze-btn {
+            background: linear-gradient(135deg, #0066cc, #00ccff);
+            border: 3px solid #00ffff;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            position: fixed;
+            z-index: 1001;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .freeze-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+        }
+        
+        .freeze-btn:disabled {
+            background: #333;
+            border-color: #666;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .p1-freeze {
+            bottom: 80px;
+            left: 10px;
+        }
+        
+        .p2-freeze {
+            bottom: 80px;
+            right: 10px;
+        }
+        
+        .frozen-overlay {
+            position: fixed;
+            background: rgba(0, 200, 255, 0.3);
+            pointer-events: none;
+            z-index: 999;
+            animation: freezePulse 0.5s ease-in-out infinite;
+            border: 3px solid #00ffff;
+        }
+        
+        @keyframes freezePulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { opacity: 0.3; }
+        }
+        
+        .freeze-timer {
+            position: fixed;
+            font-size: 48px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            z-index: 10000;
+            animation: freezeCount 1s ease-in-out infinite;
+        }
+        
+        @keyframes freezeCount {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+            25% { transform: translate(-50%, -50%) translateX(-10px); }
+            75% { transform: translate(-50%, -50%) translateX(10px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Menu -->
+    <div class="mode-selector" id="modeSelector">
+        <h1>🎮 2-Player Tower Defense</h1>
+        <button class="mode-button" onclick="startSinglePlayer()">
+            👤 SINGLE PLAYER<br>
+            <small>Classic tower defense</small>
+        </button>
+        <button class="mode-button" onclick="start2Player()">
+            👥 2-PLAYER SPLIT<br>
+            <small>Left vs Right - Battle mode!</small>
+        </button>
+    </div>
+    
+    <!-- Game UI (hidden initially) -->
+    <div class="ui-panel" id="gameUI" style="display: none;">
+        <div class="player-stats p1-stats">
+            <div>PLAYER 1</div>
+            <div>💰 <span id="p1-money">500</span></div>
+            <div>❤️ <span id="p1-lives">20</span></div>
+        </div>
+        <div style="color: white; font-size: 20px; font-weight: bold;">
+            <span id="wave-counter">Wave 1</span>
+        </div>
+        <div class="player-stats p2-stats">
+            <div>PLAYER 2</div>
+            <div>💰 <span id="p2-money">500</span></div>
+            <div>❤️ <span id="p2-lives">20</span></div>
+        </div>
+    </div>
+    
+    <!-- Tower buttons for P1 -->
+    <div class="tower-buttons p1-towers" id="p1-buttons" style="display: none;">
+        <button class="tower-btn" onclick="selectTower('P1', 'basic')">Basic $100</button>
+        <button class="tower-btn" onclick="selectTower('P1', 'sniper')">Sniper $200</button>
+        <button class="tower-btn" onclick="selectTower('P1', 'splash')">Splash $300</button>
+    </div>
+    
+    <!-- Tower buttons for P2 -->
+    <div class="tower-buttons p2-towers" id="p2-buttons" style="display: none;">
+        <button class="tower-btn" onclick="selectTower('P2', 'basic')">Basic $100</button>
+        <button class="tower-btn" onclick="selectTower('P2', 'sniper')">Sniper $200</button>
+        <button class="tower-btn" onclick="selectTower('P2', 'splash')">Splash $300</button>
+    </div>
+    
+    <!-- Freeze buttons -->
+    <button class="freeze-btn p1-freeze" id="p1-freeze" style="display: none;" onclick="freezeOpponent('P1')">
+        ❄️ FREEZE P2<br>
+        <small>Cost: $150</small>
+    </button>
+    
+    <button class="freeze-btn p2-freeze" id="p2-freeze" style="display: none;" onclick="freezeOpponent('P2')">
+        ❄️ FREEZE P1<br>
+        <small>Cost: $150</small>
+    </button>
+    
+    <canvas id="gameCanvas"></canvas>
+    
+    <script>
+        // Game setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let gameMode = null;
+        let gameRunning = false;
+        let wave = 1;
+        let frameCount = 0;
+        
+        // Player data
+        const players = {
+            P1: {
+                money: 500,
+                lives: 20,
+                towers: [],
+                enemies: [],
+                selectedTower: 'basic',
+                side: 'left',
+                color: '#00ff00',
+                path: [],
+                frozen: false,
+                freezeCooldown: 0
+            },
+            P2: {
+                money: 500,
+                lives: 20,
+                towers: [],
+                enemies: [],
+                selectedTower: 'basic',
+                side: 'right',
+                color: '#00ffff',
+                path: [],
+                frozen: false,
+                freezeCooldown: 0
+            }
+        };
+        
+        // Tower types
+        const towerTypes = {
+            basic: { cost: 100, damage: 10, range: 100, fireRate: 30, color: '#0099ff' },
+            sniper: { cost: 200, damage: 30, range: 200, fireRate: 60, color: '#ff00ff' },
+            splash: { cost: 300, damage: 20, range: 80, fireRate: 45, color: '#ff9900', splash: true }
+        };
+        
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            setupPaths();
+        }
+        
+        // Setup paths for each player
+        function setupPaths() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const topOffset = 100;
+            
+            if (gameMode === '2player') {
+                // P1 path (left side) - wider spacing for tower placement
+                const leftEdge = 40;
+                const leftMid = w/4;
+                const leftInner = w/2 - 80;
+                
+                players.P1.path = [
+                    { x: leftEdge, y: topOffset + 50 },
+                    { x: leftMid + 30, y: topOffset + 120 },
+                    { x: leftMid - 30, y: topOffset + 220 },
+                    { x: leftEdge + 60, y: topOffset + 320 },
+                    { x: leftMid, y: topOffset + 420 },
+                    { x: leftInner, y: h - 120 }
+                ];
+                
+                // P2 path (right side) - mirrored with wider spacing
+                const rightEdge = w - 40;
+                const rightMid = w*3/4;
+                const rightInner = w/2 + 80;
+                
+                players.P2.path = [
+                    { x: rightEdge, y: topOffset + 50 },
+                    { x: rightMid - 30, y: topOffset + 120 },
+                    { x: rightMid + 30, y: topOffset + 220 },
+                    { x: rightEdge - 60, y: topOffset + 320 },
+                    { x: rightMid, y: topOffset + 420 },
+                    { x: rightInner, y: h - 120 }
+                ];
+            } else {
+                // Single player path - more spacing
+                players.P1.path = [
+                    { x: 50, y: h/2 },
+                    { x: w/4, y: h/3 },
+                    { x: w/2, y: h/2 },
+                    { x: w*3/4, y: h*2/3 },
+                    { x: w - 50, y: h/2 }
+                ];
+            }
+        }
+        
+        // Start single player
+        function startSinglePlayer() {
+            gameMode = 'single';
+            document.getElementById('modeSelector').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'flex';
+            document.getElementById('p1-buttons').style.display = 'flex';
+            // Hide P2 UI
+            document.querySelector('.p2-stats').style.display = 'none';
+            resizeCanvas();
+            gameRunning = true;
+            gameLoop();
+        }
+        
+        // Start 2 player
+        function start2Player() {
+            gameMode = '2player';
+            document.getElementById('modeSelector').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'flex';
+            document.getElementById('p1-buttons').style.display = 'flex';
+            document.getElementById('p2-buttons').style.display = 'flex';
+            document.getElementById('p1-freeze').style.display = 'block';
+            document.getElementById('p2-freeze').style.display = 'block';
+            resizeCanvas();
+            gameRunning = true;
+            gameLoop();
+        }
+        
+        // Select tower type
+        function selectTower(player, type) {
+            players[player].selectedTower = type;
+        }
+        
+        // Handle touch/click
+        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (e.changedTouches.length > 0) {
+                const touch = e.changedTouches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                placeTower(x, y);
+            }
+        });
+        
+        function handleClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            placeTower(x, y);
+        }
+        
+        function placeTower(x, y) {
+            if (!gameRunning) return;
+            
+            // Determine which player based on position
+            let player = 'P1';
+            if (gameMode === '2player' && x > canvas.width / 2) {
+                player = 'P2';
+            }
+            
+            const p = players[player];
+            
+            // In 2-player mode, enforce side boundaries
+            if (gameMode === '2player') {
+                const centerX = canvas.width / 2;
+                if (player === 'P1' && x > centerX - 10) {
+                    return; // P1 can't place on right side
+                }
+                if (player === 'P2' && x < centerX + 10) {
+                    return; // P2 can't place on left side
+                }
+            }
+            
+            // Check if player is frozen
+            if (p.frozen) {
+                showFrozenMessage(player);
+                return;
+            }
+            
+            const towerType = towerTypes[p.selectedTower];
+            
+            // Check if can afford
+            if (p.money >= towerType.cost) {
+                // Check if valid position (not on path)
+                let valid = true;
+                for (let i = 0; i < p.path.length - 1; i++) {
+                    const dist = distToSegment(x, y, p.path[i], p.path[i + 1]);
+                    if (dist < 25) {  // Reduced from 40 to 25 for easier placement
+                        valid = false;
+                        break;
+                    }
+                }
+                
+                // Check if not overlapping with existing towers
+                if (valid) {
+                    for (let tower of p.towers) {
+                        const dx = tower.x - x;
+                        const dy = tower.y - y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 35) {  // Minimum 35 pixels between towers
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (valid) {
+                    p.towers.push({
+                        x: x,
+                        y: y,
+                        type: p.selectedTower,
+                        damage: towerType.damage,
+                        range: towerType.range,
+                        fireRate: towerType.fireRate,
+                        lastShot: 0,
+                        color: towerType.color
+                    });
+                    p.money -= towerType.cost;
+                    updateUI();
+                }
+            }
+        }
+        
+        // Freeze opponent function
+        function freezeOpponent(attacker) {
+            const freezeCost = 150;
+            const freezeDuration = 5000; // 5 seconds
+            const freezeCooldown = 20000; // 20 second cooldown
+            
+            const attackerPlayer = players[attacker];
+            const targetPlayer = attacker === 'P1' ? players.P2 : players.P1;
+            const targetName = attacker === 'P1' ? 'P2' : 'P1';
+            
+            // Check if can use freeze
+            if (attackerPlayer.freezeCooldown > 0) {
+                return; // Still on cooldown
+            }
+            
+            if (attackerPlayer.money < freezeCost) {
+                return; // Can't afford
+            }
+            
+            // Apply freeze
+            attackerPlayer.money -= freezeCost;
+            attackerPlayer.freezeCooldown = freezeCooldown;
+            targetPlayer.frozen = true;
+            
+            // Create frozen overlay effect
+            createFrozenOverlay(targetName);
+            
+            // Show countdown timer
+            let timeLeft = 5;
+            const timerDiv = document.createElement('div');
+            timerDiv.className = 'freeze-timer';
+            timerDiv.style.left = targetName === 'P1' ? '25%' : '75%';
+            timerDiv.style.top = '50%';
+            timerDiv.style.transform = 'translate(-50%, -50%)';
+            timerDiv.textContent = timeLeft;
+            document.body.appendChild(timerDiv);
+            
+            const countdown = setInterval(() => {
+                timeLeft--;
+                timerDiv.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    timerDiv.remove();
+                }
+            }, 1000);
+            
+            // Remove freeze after duration
+            setTimeout(() => {
+                targetPlayer.frozen = false;
+                removeFrozenOverlay(targetName);
+            }, freezeDuration);
+            
+            // Update button to show cooldown
+            const freezeBtn = document.getElementById(attacker.toLowerCase() + '-freeze');
+            freezeBtn.disabled = true;
+            
+            const cooldownInterval = setInterval(() => {
+                attackerPlayer.freezeCooldown -= 100;
+                const secondsLeft = Math.ceil(attackerPlayer.freezeCooldown / 1000);
+                
+                if (attackerPlayer.freezeCooldown <= 0) {
+                    freezeBtn.disabled = false;
+                    freezeBtn.innerHTML = '❄️ FREEZE ' + targetName + '<br><small>Cost: $150</small>';
+                    clearInterval(cooldownInterval);
+                } else {
+                    freezeBtn.innerHTML = '❄️ COOLDOWN<br><small>' + secondsLeft + 's</small>';
+                }
+            }, 100);
+            
+            updateUI();
+        }
+        
+        // Create frozen overlay
+        function createFrozenOverlay(player) {
+            const overlay = document.createElement('div');
+            overlay.id = 'frozen-overlay-' + player;
+            overlay.className = 'frozen-overlay';
+            
+            if (player === 'P1') {
+                overlay.style.left = '0';
+                overlay.style.width = '50%';
+            } else {
+                overlay.style.left = '50%';
+                overlay.style.width = '50%';
+            }
+            overlay.style.top = '80px';
+            overlay.style.height = 'calc(100vh - 80px)';
+            
+            document.body.appendChild(overlay);
+        }
+        
+        // Remove frozen overlay
+        function removeFrozenOverlay(player) {
+            const overlay = document.getElementById('frozen-overlay-' + player);
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+        
+        // Show frozen message
+        function showFrozenMessage(player) {
+            const msg = document.createElement('div');
+            msg.style.cssText = `
+                position: fixed;
+                ${player === 'P1' ? 'left: 25%' : 'left: 75%'};
+                top: 40%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 150, 255, 0.9);
+                color: white;
+                padding: 20px 30px;
+                border-radius: 10px;
+                font-size: 20px;
+                font-weight: bold;
+                z-index: 10001;
+                animation: shake 0.5s;
+            `;
+            msg.textContent = '❄️ FROZEN! ❄️';
+            document.body.appendChild(msg);
+            
+            setTimeout(() => msg.remove(), 1000);
+        }
+        
+        // Distance to line segment
+        function distToSegment(px, py, p1, p2) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const t = Math.max(0, Math.min(1, ((px - p1.x) * dx + (py - p1.y) * dy) / (dx * dx + dy * dy)));
+            const nx = p1.x + t * dx;
+            const ny = p1.y + t * dy;
+            return Math.sqrt((px - nx) * (px - nx) + (py - ny) * (py - ny));
+        }
+        
+        // Spawn enemies
+        function spawnEnemies() {
+            if (frameCount % 120 === 0) { // Every 2 seconds at 60fps
+                if (gameMode === '2player') {
+                    // Spawn for both players
+                    spawnEnemy('P1');
+                    spawnEnemy('P2');
+                } else {
+                    spawnEnemy('P1');
+                }
+            }
+        }
+        
+        function spawnEnemy(player) {
+            const p = players[player];
+            p.enemies.push({
+                x: p.path[0].x,
+                y: p.path[0].y,
+                hp: 50 + wave * 10,
+                maxHp: 50 + wave * 10,
+                speed: 1 + wave * 0.1,
+                pathIndex: 0,
+                value: 10 + wave * 5
+            });
+        }
+        
+        // Update enemies
+        function updateEnemies() {
+            for (let player in players) {
+                if (gameMode === 'single' && player === 'P2') continue;
+                
+                const p = players[player];
+                
+                for (let i = p.enemies.length - 1; i >= 0; i--) {
+                    const enemy = p.enemies[i];
+                    
+                    // Move enemy
+                    if (enemy.pathIndex < p.path.length - 1) {
+                        const target = p.path[enemy.pathIndex + 1];
+                        const dx = target.x - enemy.x;
+                        const dy = target.y - enemy.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < 5) {
+                            enemy.pathIndex++;
+                        } else {
+                            enemy.x += (dx / dist) * enemy.speed;
+                            enemy.y += (dy / dist) * enemy.speed;
+                        }
+                    } else {
+                        // Reached end
+                        p.lives--;
+                        p.enemies.splice(i, 1);
+                        updateUI();
+                        
+                        if (p.lives <= 0) {
+                            gameOver(player);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update towers
+        function updateTowers() {
+            for (let player in players) {
+                if (gameMode === 'single' && player === 'P2') continue;
+                
+                const p = players[player];
+                
+                for (let tower of p.towers) {
+                    tower.lastShot++;
+                    
+                    if (tower.lastShot >= tower.fireRate) {
+                        // Find target
+                        for (let enemy of p.enemies) {
+                            const dx = enemy.x - tower.x;
+                            const dy = enemy.y - tower.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (dist <= tower.range) {
+                                // Shoot
+                                enemy.hp -= tower.damage;
+                                tower.lastShot = 0;
+                                
+                                // Create projectile effect
+                                createProjectile(tower.x, tower.y, enemy.x, enemy.y, tower.color);
+                                
+                                if (enemy.hp <= 0) {
+                                    p.money += enemy.value;
+                                    p.enemies.splice(p.enemies.indexOf(enemy), 1);
+                                    updateUI();
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Projectiles for visual effect
+        const projectiles = [];
+        
+        function createProjectile(x1, y1, x2, y2, color) {
+            projectiles.push({
+                x: x1,
+                y: y1,
+                targetX: x2,
+                targetY: y2,
+                color: color,
+                life: 10
+            });
+        }
+        
+        function updateProjectiles() {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.life--;
+                if (p.life <= 0) {
+                    projectiles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update UI
+        function updateUI() {
+            document.getElementById('p1-money').textContent = players.P1.money;
+            document.getElementById('p1-lives').textContent = players.P1.lives;
+            document.getElementById('wave-counter').textContent = 'Wave ' + wave;
+            
+            if (gameMode === '2player') {
+                document.getElementById('p2-money').textContent = players.P2.money;
+                document.getElementById('p2-lives').textContent = players.P2.lives;
+            }
+        }
+        
+        // Render game
+        function render() {
+            // Clear
+            ctx.fillStyle = '#000033';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw divider and territories in 2-player mode
+            if (gameMode === '2player') {
+                const centerX = canvas.width / 2;
+                
+                // Draw subtle territory backgrounds
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.02)';
+                ctx.fillRect(0, 80, centerX, canvas.height);
+                
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.02)';
+                ctx.fillRect(centerX, 80, centerX, canvas.height);
+                
+                // Draw glowing divider line
+                // Glow effect
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 20;
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, 80);
+                ctx.lineTo(centerX, canvas.height);
+                ctx.stroke();
+                
+                // Main divider
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#0099ff';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(centerX, 80);
+                ctx.lineTo(centerX, canvas.height);
+                ctx.stroke();
+                
+                // Add "P1" and "P2" labels
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('PLAYER 1', centerX / 2, 60);
+                
+                ctx.fillStyle = '#00ffff';
+                ctx.fillText('PLAYER 2', centerX + centerX / 2, 60);
+            }
+            
+            // Draw paths
+            for (let player in players) {
+                if (gameMode === 'single' && player === 'P2') continue;
+                
+                const p = players[player];
+                ctx.strokeStyle = p.color + '33';
+                ctx.lineWidth = 30;
+                ctx.beginPath();
+                for (let i = 0; i < p.path.length; i++) {
+                    if (i === 0) {
+                        ctx.moveTo(p.path[i].x, p.path[i].y);
+                    } else {
+                        ctx.lineTo(p.path[i].x, p.path[i].y);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // Draw towers
+            for (let player in players) {
+                if (gameMode === 'single' && player === 'P2') continue;
+                
+                const p = players[player];
+                for (let tower of p.towers) {
+                    // Tower base
+                    ctx.fillStyle = tower.color;
+                    ctx.fillRect(tower.x - 20, tower.y - 20, 40, 40);
+                    
+                    // Range indicator
+                    ctx.strokeStyle = tower.color + '33';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw enemies
+            for (let player in players) {
+                if (gameMode === 'single' && player === 'P2') continue;
+                
+                const p = players[player];
+                for (let enemy of p.enemies) {
+                    // Enemy body
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Health bar
+                    const hpPercent = enemy.hp / enemy.maxHp;
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fillRect(enemy.x - 15, enemy.y - 25, 30 * hpPercent, 3);
+                }
+            }
+            
+            // Draw projectiles
+            for (let p of projectiles) {
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = p.life / 10;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.targetX, p.targetY);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        // Game over
+        function gameOver(loser) {
+            gameRunning = false;
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#ff0000';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            
+            if (gameMode === '2player') {
+                const winner = loser === 'P1' ? 'PLAYER 2' : 'PLAYER 1';
+                ctx.fillText(winner + ' WINS!', canvas.width / 2, canvas.height / 2);
+            } else {
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+            }
+        }
+        
+        // Wave progression
+        function checkWaveComplete() {
+            let allClear = true;
+            for (let player in players) {
+                if (gameMode === 'single' && player === 'P2') continue;
+                if (players[player].enemies.length > 0) {
+                    allClear = false;
+                    break;
+                }
+            }
+            
+            if (allClear && frameCount % 180 === 0) { // 3 second delay
+                wave++;
+                updateUI();
+            }
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            frameCount++;
+            
+            // Update
+            spawnEnemies();
+            updateEnemies();
+            updateTowers();
+            updateProjectiles();
+            checkWaveComplete();
+            
+            // Render
+            render();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Prevent iOS bounce
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>

@@ -12,7 +12,6 @@
     <!-- <script src="app_store_features.js"></script> -->
     <!-- <script src="game_assets.js"></script> -->
     <!-- <script src="enhanced_particles.js"></script> -->
-    <script src="monetization_system.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
@@ -1189,11 +1188,6 @@ function resizeCanvas() {
 let money = 400; // Reduced starting money
 let health = 100;
 let level = 1;
-// Make money global for monetization system
-window.money = money;
-window.gameSpeed = 1;
-window.moneyMultiplier = 1;
-window.currentWave = 1;
 let score = 0;
 let enemies = [];
 let towers = [];
@@ -4629,15 +4623,8 @@ class Enemy {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < 30) {
-                // Check if player has lives
-                if (window.monetization && !window.monetization.useLife()) {
-                    // No lives left, game over
-                    gameRunning = false;
-                    showGameOverScreen();
-                } else {
-                    health -= this.boss ? 50 : 10;
-                    updateUI();
-                }
+                health -= this.boss ? 50 : 10;
+                updateUI();
                 return true;
             }
             
@@ -4811,22 +4798,7 @@ class Enemy {
         }
         
         if (this.health <= 0) {
-            // Apply money multiplier and VIP benefits
-            let rewardAmount = this.reward;
-            if (window.moneyMultiplier) {
-                rewardAmount *= window.moneyMultiplier;
-            }
-            if (window.monetization) {
-                const benefits = window.monetization.getVIPBenefits();
-                rewardAmount *= benefits.moneyMultiplier;
-
-                // Add battle pass XP
-                if (window.monetization.battlePass.active) {
-                    window.monetization.addBattlePassXP(this.boss ? 50 : 10);
-                }
-            }
-            money += rewardAmount;
-            window.money = money;
+            money += this.reward;
             score += this.reward * level;
             updateUI();
             
@@ -5865,9 +5837,6 @@ function updateUI() {
         console.log('UI not ready yet');
         return;
     }
-
-    // Sync with monetization system
-    window.money = money;
     
     document.getElementById('money').textContent = money;
     document.getElementById('health').textContent = health;
@@ -6728,16 +6697,7 @@ function spawnLevel() {
 // Spawn wave
 function spawnWave(levelInfo) {
     currentWave++;
-    window.currentWave = currentWave;
     enemiesSpawning = true;
-
-    // Give gems for completing waves
-    if (window.monetization && currentWave > 1) {
-        const gemReward = Math.floor(currentWave / 5);
-        if (gemReward > 0) {
-            window.monetization.addGems(gemReward, 'wave_complete');
-        }
-    }
     
     let totalEnemies = 0;
     let spawnDelay = 0;
@@ -6910,57 +6870,7 @@ function togglePerformanceMode() {
 }
 
 // Main game loop
-// Game over screen
-function showGameOverScreen() {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-    `;
-
-    modal.innerHTML = `
-        <div style="background: #222; border-radius: 20px; padding: 30px; text-align: center; color: white;">
-            <h1 style="color: #ff4444; margin-bottom: 20px;">GAME OVER</h1>
-            <p style="font-size: 24px; margin-bottom: 20px;">Wave: ${currentWave}</p>
-            <p style="font-size: 20px; margin-bottom: 30px;">Score: ${score}</p>
-            <button onclick="location.reload()" style="
-                background: #4CAF50;
-                border: none;
-                border-radius: 10px;
-                padding: 15px 30px;
-                color: white;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                margin: 10px;
-            ">Restart Game</button>
-            <button onclick="window.monetization && window.monetization.showShop()" style="
-                background: linear-gradient(135deg, #667eea, #764ba2);
-                border: none;
-                border-radius: 10px;
-                padding: 15px 30px;
-                color: white;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                margin: 10px;
-            ">Get More Lives 💎</button>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-}
-
-// Make gameLoop accessible globally for monetization
-window.gameLoop = function gameLoop(currentTime) {
+function gameLoop(currentTime) {
     // Check if canvas and ctx are initialized
     if (!canvas || !ctx) {
         console.error('Canvas or context not initialized in gameLoop');

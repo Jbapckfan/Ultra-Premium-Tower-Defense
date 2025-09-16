@@ -2,7 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Recent Major Updates (2024)
+## Recent Major Updates (2024-2025)
+
+### Latest Fixes (September 2025)
+- **Fixed Split-Screen Layout**: Players now truly separated with left/right territories
+- **Improved Path Spacing**: Wider gaps between path segments for easier tower placement
+- **Reduced Path Validation**: Tower placement radius reduced from 40 to 25 pixels
+- **Added Tower Spacing**: Minimum 35 pixel spacing between towers to prevent overlap
+- **Enhanced Visual Divider**: Glowing cyan divider with player labels and territory backgrounds
+- **Better Path Design**: More gradual turns with strategic placement opportunities
 
 ### Core Features Added
 - **Sound System**: Web Audio API-based sound effects for shooting, hits, and explosions
@@ -15,13 +23,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Speed Controls**: 1x-5x game speed with color-coded buttons
 - **Tower Targeting**: Nearest, Farthest, Strongest, Weakest, First, Last priorities
 
+### 2-Player Modes (NEW - 2025)
+- **Split-Screen PvP**: True left vs right competitive tower defense with visual divider
+- **Separate Resources**: Each player has own money, lives, and towers
+- **Freeze Ability**: $150 to freeze opponent for 5 seconds (20s cooldown)
+- **Attack Units**: Send enemies to opponent's lane (5 types: Rusher, Tank, Swarm, Stealth, Boss)
+- **Middle Zone Control**: Contested area with bonus resources
+- **Power Surges**: Game-changing temporary abilities
+- **True Competitive Play**: Not just shared screen, actual versus gameplay
+- **Improved Path Design**: Wider spacing between path segments for easier tower placement
+- **Territory Visualization**: Subtle colored backgrounds and glowing divider line
+
 ### iOS/Touch Optimizations
 - Fully touch-based controls (no mouse/keyboard required)
-- Multi-touch support for 2-player co-op
+- Multi-touch support for 2-player modes
 - Touch-friendly UI with larger buttons
 - Click-outside-to-close for all modals
 - Sell mode button for easy tower selling
 - iPad keyboard support (optional)
+- Split-screen optimized for iPad landscape mode
 
 ### Visual Improvements
 - Ultra HD particle effects with gradients and glows
@@ -31,6 +51,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Boss health bar with animated shine effect
 - Floating damage numbers (performance-aware)
 - Money popup animations
+
+## Deployment to iPad
+
+### Quick Start for iPad
+1. **Run the server**: `python3 serve_ipad.py` in project directory
+2. **Get IP address**: Script will display local IP (e.g., 10.15.0.117)
+3. **On iPad**: Open Safari, go to `http://YOUR_IP:8000/game_2player_working.html`
+4. **Requirements**: iPad and Mac must be on same WiFi network
+
+### Available Game Versions
+- `game_2player_working.html` - **RECOMMENDED**: Full 2-player split-screen with freeze ability and improved path spacing
+- `game_ipad.html` - Original single-player version optimized for iPad
+- `game_ios.html` - Simplified iOS-specific version
+- `game.html` - Main development version (may have issues)
+- `game_original.html` - Stable backup of original game
 
 ## Development Commands
 
@@ -131,6 +166,66 @@ The HTML5 game implements:
 - Animated health bars
 - Floating text system for damage/money
 - Boss warning animations
+
+## Game Files Structure
+
+### Core Game Files
+- **game_2player_working.html** - Latest working 2-player split-screen version with freeze ability
+- **real_2player_mode.js** - Advanced 2-player system with competitive/cooperative modes
+- **pvp_dynamics.js** - PvP features: unit sending, middle zone control, power surges
+- **multitouch_coop.js** - Multi-touch support for simultaneous play
+- **serve_ipad.py** - Python server script for iPad deployment
+
+### Enhancement Files (Currently Disabled)
+- **app_store_features.js** - Monetization and progression systems
+- **game_assets.js** - Visual sprite system
+- **visual_excellence.js** - GPU particles and dynamic lighting
+- **enhanced_particles.js** - Simplified particle system
+
+### Backup Files
+- **game_original.html** - Last known stable version
+- **game_backup_*.html** - Timestamped backups
+
+## Troubleshooting
+
+### Game Won't Load
+1. **Check browser console** for JavaScript errors
+2. **Use game_2player_working.html** - Most stable version
+3. **Disable external scripts** - Comment out script includes if issues persist
+4. **Clear browser cache** - Force reload with Cmd+Shift+R
+
+### iPad Connection Issues
+1. **Verify same WiFi network** - Both devices must be on same network
+2. **Check firewall** - Mac firewall might block port 8000
+3. **Try different browser** - Safari recommended for iPad
+4. **Restart server** - Kill and restart `serve_ipad.py`
+
+### Performance Issues
+1. **Reduce particle effects** - Disable visual enhancements
+2. **Lower enemy spawn rate** - Adjust wave timing
+3. **Use game_ios.html** - Simplified version for older iPads
+4. **Close other apps** - Free up iPad memory
+
+## 2-Player Mode Features
+
+### Freeze Ability Details
+- **Cost**: $150 per use
+- **Duration**: 5 seconds (opponent cannot place/upgrade towers)
+- **Cooldown**: 20 seconds
+- **Visual**: Frozen overlay with countdown timer
+- **Strategy**: Time it before big waves or when opponent is low on defenses
+
+### Competitive Mechanics
+- **Split Screen**: Left player (P1) vs Right player (P2)
+- **Separate Paths**: Each player defends their own lane
+- **Independent Resources**: Own money, lives, towers
+- **Victory Condition**: First to lose all lives loses
+
+### Future PvP Features (Implemented but not integrated)
+- **Attack Units**: Send enemies to opponent ($75-$400)
+- **Power Surges**: Temporary abilities (double speed, mega damage, shield)
+- **Middle Zone**: Contested area with bonus resources
+- **Sabotage Actions**: Disable towers, steal money, speed boost enemies
 
 ## Important Notes
 - The game logic is entirely contained in `game.html` - modifying game mechanics requires editing this file
