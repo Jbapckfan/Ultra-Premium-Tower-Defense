@@ -16,6 +16,7 @@
     <script src="analytics_system.js"></script>
     <script src="tutorial_system.js"></script>
     <script src="meta_progression.js"></script>
+    <script src="premium_visuals.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
@@ -2763,6 +2764,29 @@ class Tower {
                 }
             }
         } else {
+            // Premium tower visual effects on firing
+            if (window.premiumVisuals) {
+                window.premiumVisuals.createTowerEffect(this, this.type);
+
+                // Muzzle flash particles
+                window.premiumVisuals.emitParticleBurst(
+                    this.x, this.y, 5,
+                    {
+                        speed: 3,
+                        color: { r: 255, g: 255, b: 100, a: 1 },
+                        size: 2,
+                        lifetime: 0.3,
+                        glow: true,
+                        type: 'muzzle'
+                    }
+                );
+
+                // Screen shake for powerful towers
+                if (['railgun', 'omega', 'void'].includes(this.type)) {
+                    window.premiumVisuals.shakeCamera(5, 100);
+                }
+            }
+
             // Projectile weapon
             projectiles.push({
                 x: this.x,
@@ -4858,8 +4882,46 @@ class Enemy {
             }
             updateUI();
             
-            // Death explosion effect
-            // Disabled for stability
+            // Premium death explosion effect
+            if (window.premiumVisuals) {
+                // Camera shake based on enemy type
+                const shakeIntensity = this.boss ? 30 : 10;
+                window.premiumVisuals.shakeCamera(shakeIntensity, 300);
+
+                // Particle burst
+                const particleCount = this.boss ? 100 : 30;
+                const particleColor = this.boss ?
+                    { r: 255, g: 100, b: 0, a: 1 } :
+                    { r: 255, g: 200, b: 0, a: 1 };
+
+                window.premiumVisuals.emitParticleBurst(
+                    this.position.x, this.position.y,
+                    particleCount,
+                    {
+                        speed: this.boss ? 15 : 8,
+                        color: particleColor,
+                        size: this.boss ? 6 : 3,
+                        lifetime: this.boss ? 3 : 1.5,
+                        glow: true,
+                        type: 'explosion'
+                    }
+                );
+
+                // Create battle scar
+                if (this.boss) {
+                    window.premiumVisuals.createExplosionScar(
+                        this.position.x, this.position.y, 50
+                    );
+                }
+
+                // Kill cam for boss deaths
+                if (this.boss && window.premiumVisuals.camera) {
+                    window.premiumVisuals.cinematicKillCam(
+                        { x: this.position.x, y: this.position.y },
+                        this
+                    );
+                }
+            }
             /*
             if (window.enhancedParticles) {
                 const power = this.boss ? 3 : (this.megaBoss ? 5 : 1);
